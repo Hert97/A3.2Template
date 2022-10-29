@@ -49,131 +49,51 @@ const float kirsch[8][3][3] = {
 
 //two extra row/col
 shared vec3 sData[16+2][16+2];
-
-
-vec3 Conv(in vec3[3] data, in vec3[3] kernel) 
-{
-   vec3 res = vec3(0.0);
-   for (int i = 0; i < 3 ; ++i)
-		res += data[i] * kernel[i];   	
-   return res;
-}
-
-
-bool IsCorner(const uint x,const uint y)
-{
-	const uvec2 last = gl_WorkGroupSize.xy - uvec2(1,1);
-	return ((x == 0 && y == 0) || 
-	(x == last.x && y == 0) || 
-	(x == 0  && y == last.y) || 
-	(x == last.x && y == last.y));
-
-}
-
+const uint blockSize = gl_WorkGroupSize.x;
+const uint maskSize = 1u;
 
 void main()
 {
-    //your code here
 
-	const uvec2 imSize = imageSize(inputImage);
+  for (int i = 0; i < 2; ++i)
+  { 
+    //flatten one block threads
+    uint threadIdx = 
+        gl_LocalInvocationID.y  * blockSize + gl_LocalInvocationID.x + i * blockSize * blockSize;
+    uint sr = threadIdx / 18;
+    uint sc = threadIdx % 18;
+    //get image texel coordinate
+    uint s = gl_WorkGroupID.x * blockSize + (sc - maskSize); 
+    uint t = gl_WorkGroupID.y * blockSize + (sr - maskSize);
 
-	const uint gx_o =  gl_GlobalInvocationID.x ;
-	const uint gy_o =  gl_GlobalInvocationID.y;
-	
-	if(gx_o < imSize.x && gy_o < imSize.y)
-	{
-		//uint lx_i = (gx_o / gl_NumWorkGroups.x) % gl_WorkGroupSize.x ;
-		//uint ly_i = (gy_o / gl_NumWorkGroups.y) / gl_WorkGroupSize.y ;
-	
-		const uint lx_i = gl_LocalInvocationID.x ;
-		const uint ly_i = gl_LocalInvocationID.y;
-		//corners loads 3 addition elements
-		if (IsCorner(lx_i, ly_i))
-		{
-			//North-West (0,0)
-			sData[ly_i - 1][lx_i - 1] = imageLoad(inputImage, ivec2(gx_o - 1, gy_o - 1)).rgb;
-			//North
-			sData[ly_i - 1][lx_i] = imageLoad(inputImage, ivec2(gx_o, gy_o - 1)).rgb;
-			//West
-			sData[ly_i][lx_i - 1] = imageLoad(inputImage, ivec2(gx_o - 1, gy_o )).rgb;
+    if (sr < 18 && sc < 18)
+      sData[sr][sc] = imageLoad(inputImage, ivec2(s, t)).rgb; //out of range read will return 0
+  }
+  //wait for all threads to load 
+  barrier();
 
-		}
-		//edge loads 1 addition element
-		else
-		{
-			//top edge
-			if (ly_i == 0)
-				sData[ly_i - 1][lx_i] = imageLoad(inputImage, ivec2(gx_o, gy_o - 1)).rgb ;
-			//btm edge
-			else if (ly_i == gl_WorkGroupSize.y - 1)
-				sData[ly_i + 1][lx_i] = imageLoad(inputImage, ivec2(gx_o, gy_o + 1)).rgb ;
-			//left edge
-			else if (lx_i == 0)
-				sData[ly_i][lx_i - 1] = imageLoad(inputImage, ivec2(gx_o - 1, gy_o )).rgb;
-			//right edge
-			else if (lx_i == gl_WorkGroupSize.x - 1)
-				sData[ly_i][lx_i + 1] = imageLoad(inputImage, ivec2(gx_o, gy_o - 1)).rgb;
+  //convul
+  vec3 res = vec3(0.0);
+  //make current as center pixel 
+  uint tx = gl_LocalInvocationID.x + maskSize;
+  uint ty = gl_LocalInvocationID.y + maskSize;
+  for (int i = 0; i < 8; ++i)
+  {
+    vec3 temp = vec3(0.0);
 
-		}
-		// current
-		sData[ly_i][lx_i] = imageLoad(inputImage, ivec2(gl_GlobalInvocationID.xy)).rgb;
-
-		// ensure sData change is visible to other invocation
-		memoryBarrierShared();
-		// wait till all threads is done with writing to sData
-		barrier();
-
-#if 1
-		uint startX_i = gx_o - 1;
-		uint startY_i = gy_o - 1;
-		//fetch data from shared surrounding pixel
-		int index = 0;
-		vec3[3] data;
-		for (int y = -1; y < 2 ; ++y)
-		{
-			for (int x = -1; x < 2 ; ++x)
-			{
-				//each axis
-				for (int a = 0; a < 3 ; ++a)
-					data[index][a] = sData[ly_i + y][lx_i + x][a];
-				++index;
-			}
-			
-		}
-		vec3 res = vec3(0.0);
-
-		for (int i = 0; i < 8 ; ++i)
-		{
-			vec3[3] kernel;
-			//init kernel
-			for (int j = 0; j < 3 ; ++j)
-			{
-				for (int a = 0; a < 3 ; ++a)
-					kernel[j][a] = kirsch[i][j][a];
-			}
-			vec3 pixel = Conv(data,kernel);
-			res.r = max(pixel.r,res.r);
-			res.g = max(pixel.g,res.g);
-			res.b = max(pixel.b,res.b);
-
-		}
-
-		//if(startX_i < imSize.x && startY_i < imSize.y)
-		{
-			vec3 p = min(res/8.0f,vec3(1.0));
-			imageStore(resultImage,ivec2(gl_GlobalInvocationID.xy),vec4(vec3(p),1.0));
-
-		}
-#endif
-//		uint startX_i = gx_o - 1;
-//		uint startY_i = gy_o - 1;
-//		vec3 p = sData[ly_i][lx_i];//imageLoad(inputImage,ivec2(gl_GlobalInvocationID.xy)).rgb;;
-//		if(startX_i < imSize.x && startY_i < imSize.y)
-//			//imageStore(resultImage,ivec2(gl_GlobalInvocationID.xy),vec4(p,1.0) );
-//			imageStore(resultImage,ivec2(startX_i,startY_i),vec4(p,1.0) );
-
-	}
-  
+    for (int y = -1; y < 2; ++y)
+    {
+      for (int x = -1; x < 2; ++x)
+      {
+        temp += sData[ty + y][tx + x] * kirsch[i][y + 1][x + 1];
+      }
+    }
+    //take max of each kernel operation
+    res = max(temp, res);
+  }
+  //clamp pixel rgb between 0 and 1
+  res = clamp(res/8,vec3(0.0),vec3(1.0));
+  imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(res, 1.0));
 }
  	
  

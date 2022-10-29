@@ -1,4 +1,5 @@
 @echo off
-
-"C:\VulkanSDK\1.3.204.1\Bin\glslc.exe" "kirsch.comp" -o "kirsch.comp.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "histogram.comp" -o "histogram.comp.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "cdfScan.comp" -o "cdfScan.comp.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "applyhisto.comp" -o "applyhisto.comp.spv"
 pause

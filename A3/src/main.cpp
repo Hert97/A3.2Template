@@ -549,9 +549,9 @@ public:
 			vks::initializers::computePipelineCreateInfo(compute.pipelineLayout, 0);
 
 		// One pipeline for each effect
-		shaderNames = { "emboss" };
+		shaderNames = { "histogram" , "cdfScan" , "applyhisto" };
 		for (auto& shaderName : shaderNames) {
-			std::string fileName = getShadersPath() + "computeshader/" + shaderName + ".comp.spv";
+			std::string fileName = getShadersPath() + "computeshader/Equalization/" + shaderName + ".comp.spv";
 			computePipelineCreateInfo.stage = loadShader(fileName, VK_SHADER_STAGE_COMPUTE_BIT);
 			VkPipeline pipeline;
 			VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
