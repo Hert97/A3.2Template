@@ -1,99 +1,19 @@
 #version 450
 
 layout (local_size_x = 16, local_size_y = 16) in;
-layout (binding = 0, rgba8) uniform readonly image2D inputImage;
-layout (binding = 1, rgba8) uniform image2D resultImage;
+layout (binding = 0, rgba8) uniform image2D resultImage;
 
-const float kirsch[8][3][3] = {
-        {
-         {5, 5, 5},
-         {-3, 0, -3},           /*rotation 1 */
-         {-3, -3, -3}
-         },
-        {
-         {5, 5, -3},
-         {5, 0, -3},            /*rotation 2 */
-         {-3, -3, -3}
-         },
-        {
-         {5, -3, -3},
-         {5, 0, -3},            /*rotation 3 */
-         {5, -3, -3}
-         },
-        {
-         {-3, -3, -3},
-         {5, 0, -3},            /*rotation 4 */
-         {5, 5, -3}
-         },
-        {
-         {-3, -3, -3},
-         {-3, 0, -3},           /*rotation 5 */
-         {5, 5, 5}
-         },
-        {
-         {-3, -3, -3},
-         {-3, 0, 5},            /*rotation 6 */
-         {-3, 5, 5}
-         },
-        {
-         {-3, -3, 5},
-         {-3, 0, 5},            /*rotation 7 */
-         {-3, -3, 5}
-         },
-        {
-         {-3, 5, 5},
-         {-3, 0, 5},            /*rotation 8 */
-         {-3, -3, -3}
-         }
-    };
+layout (binding = 1) buffer HistoEq
+{
+	uint histoBin[256];
+    float cdf[256];
 
-//two extra row/col
-shared vec3 sData[16+2][16+2];
-const uint blockSize = gl_WorkGroupSize.x;
-const uint maskSize = 1u;
+} histoEq;
 
 void main()
 {
 
-  for (int i = 0; i < 2; ++i)
-  { 
-    //flatten one block threads
-    uint threadIdx = 
-        gl_LocalInvocationID.y  * blockSize + gl_LocalInvocationID.x + i * blockSize * blockSize;
-    uint sr = threadIdx / 18;
-    uint sc = threadIdx % 18;
-    //get image texel coordinate
-    uint s = gl_WorkGroupID.x * blockSize + (sc - maskSize); 
-    uint t = gl_WorkGroupID.y * blockSize + (sr - maskSize);
-
-    if (sr < 18 && sc < 18)
-      sData[sr][sc] = imageLoad(inputImage, ivec2(s, t)).rgb; //out of range read will return 0
-  }
-  //wait for all threads to load 
-  barrier();
-
-  //convul
-  vec3 res = vec3(0.0);
-  //make current as center pixel 
-  uint tx = gl_LocalInvocationID.x + maskSize;
-  uint ty = gl_LocalInvocationID.y + maskSize;
-  for (int i = 0; i < 8; ++i)
-  {
-    vec3 temp = vec3(0.0);
-
-    for (int y = -1; y < 2; ++y)
-    {
-      for (int x = -1; x < 2; ++x)
-      {
-        temp += sData[ty + y][tx + x] * kirsch[i][y + 1][x + 1];
-      }
-    }
-    //take max of each kernel operation
-    res = max(temp, res);
-  }
-  //clamp pixel rgb between 0 and 1
-  res = clamp(res/8,vec3(0.0),vec3(1.0));
-  imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(res, 1.0));
+  imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(histoEq.histoBin[0]),1.0));
 }
  	
  
