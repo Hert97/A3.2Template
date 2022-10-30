@@ -2,48 +2,50 @@
 
 layout (local_size_x = 16, local_size_y = 16) in;
 layout (binding = 0, rgba8) uniform readonly image2D inputImage;
+#define HISTO_SIZE 256
 
 layout (binding = 1) buffer HistoEq
 {
-	uint histoBin[256];
-    float cdf[256];
+	uint histoBin[HISTO_SIZE];
+    float cdf[HISTO_SIZE];
 
 } histoEq;
 
-shared uint s_histo[256];
+shared uint s_histo[HISTO_SIZE];
 
 void main()
 {
     uint index = gl_GlobalInvocationID.y * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
-    if(index < 256)
+    if(index < HISTO_SIZE)
     {
         s_histo[index] = 0;
-        histoEq.histoBin[index] = 1;
     }
     memoryBarrierShared();
     barrier();
 
-//
-//    uint tid = gl_GlobalInvocationID.y * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
-//    uint stride = gl_WorkGroupSize.x * gl_WorkGroupSize.y;
-//    uvec2 imageDim = imageSize(inputImage);
-//    while (tid < imageDim.x * imageDim.y)
-//    {
-//        uint s = tid % imageDim.x;
-//        uint t = tid / imageDim.x;
-//        vec3 pixel = imageLoad(inputImage, ivec2(s, t)).rgb;
-//        float Y = 0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b;
-//        uint v = uint(clamp(Y,0,255));
-//        atomicAdd(s_histo[v],1);
-//        tid += stride;
-//    }
-//    barrier();
-//    
-//
-//    if (tid < 256) 
-//    {
-//      atomicAdd(histoEq.histoBin[tid], s_histo[tid]);
-//    }
+    uint tid = gl_GlobalInvocationID.y * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
+    uint stride = gl_WorkGroupSize.x * gl_NumWorkGroups.x + 
+        gl_WorkGroupSize.y * gl_NumWorkGroups.y;
+    uvec2 imageDim = imageSize(inputImage) ;
+    uint size = imageDim.x * imageDim.y;
+    while(tid < size)
+    {
+        uint s = tid % imageDim.x;
+        uint t = tid / imageDim.x;
+        vec3 pixel = imageLoad(inputImage, ivec2(s, t)).rgb;
+        float Y = 0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b;
+        uint v = uint(clamp(Y * 255.0f,0.0f,255.0f));
+        atomicAdd(s_histo[v],1);
+        tid += stride;
+    }
+    memoryBarrierShared();
+    barrier();
+
+    if (gl_LocalInvocationID.x < HISTO_SIZE) 
+    {
+        atomicAdd(histoEq.histoBin[gl_LocalInvocationID.x]
+        , s_histo[gl_LocalInvocationID.x]);
+    }
 
 }
  	
