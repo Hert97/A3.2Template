@@ -221,7 +221,7 @@ public:
 		///@William
 		textureColorMap.loadFromFile(getAssetPath() + "textures/lena.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
 		//textureColorMap.loadFromFile(getAssetPath() + "textures/" + benchmark.sourcefile, VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
-
+		std::cout << "H:" << textureColorMap.height <<"W:" << textureColorMap.width << '\n';
 	}
 
 	void buildCommandBuffers()
@@ -332,7 +332,8 @@ public:
 		//groupCountY is the number of local workgroups to dispatch in the Y dimension.
 		//groupCountZ is the number of local workgroups to dispatch in the Z dimension.
 		vkCmdDispatch(compute.commandBuffer, (textureComputeTarget.width - 1) / 16 + 1, (textureComputeTarget.height - 1) / 16 + 1, 1);
-		
+		//vkCmdDispatch(compute.commandBuffer, textureComputeTarget.width / 16 , textureComputeTarget.height / 16, 1);
+
 		//cdf
 		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelines[1]);
 		vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelineLayout[1], 0, 1, &compute.descriptorSet[1], 0, 0);

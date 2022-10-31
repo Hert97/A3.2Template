@@ -20,6 +20,7 @@ void main()
    for(int i = 1 ; i < 256 ; ++i)
    {
         scan[i] = prob * float(histoEq.histoBin[i]) +  float(histoEq.histoBin[i - 1]) ;
+        histoEq.cdf[i] =  scan[i] ;
    }
    
 

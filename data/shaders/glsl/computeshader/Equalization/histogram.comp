@@ -12,39 +12,31 @@ layout (binding = 1) buffer HistoEq
 } histoEq;
 
 shared uint s_histo[HISTO_SIZE];
-
 void main()
 {
-    uint index = gl_GlobalInvocationID.y * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
-    if(index < HISTO_SIZE)
-    {
-        s_histo[index] = 0;
-    }
+    if(gl_LocalInvocationIndex < HISTO_SIZE)
+        s_histo[gl_LocalInvocationIndex] = 0;
     memoryBarrierShared();
     barrier();
 
-    uint tid = gl_GlobalInvocationID.y * gl_WorkGroupSize.x + gl_GlobalInvocationID.x;
-    uint stride = gl_WorkGroupSize.x * gl_NumWorkGroups.x + 
-        gl_WorkGroupSize.y * gl_NumWorkGroups.y;
     uvec2 imageDim = imageSize(inputImage) ;
-    uint size = imageDim.x * imageDim.y;
-    while(tid < size)
+    uint x = gl_GlobalInvocationID.x ;
+    uint y = gl_GlobalInvocationID.y ;
+
+    if(x < imageDim.x && y < imageDim.y)
     {
-        uint s = tid % imageDim.x;
-        uint t = tid / imageDim.x;
-        vec3 pixel = imageLoad(inputImage, ivec2(s, t)).rgb;
-        float Y = 0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b;
-        uint v = uint(clamp(Y * 255.0f,0.0f,255.0f));
+        vec3 pixel = imageLoad(inputImage, ivec2(x,y)).rgb;
+        uint Y = uint(255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b) );
+        uint v = clamp(Y,0,255);
         atomicAdd(s_histo[v],1);
-        tid += stride;
     }
     memoryBarrierShared();
     barrier();
 
-    if (gl_LocalInvocationID.x < HISTO_SIZE) 
+    if (gl_LocalInvocationIndex < HISTO_SIZE) 
     {
-        atomicAdd(histoEq.histoBin[gl_LocalInvocationID.x]
-        , s_histo[gl_LocalInvocationID.x]);
+        atomicAdd(histoEq.histoBin[gl_LocalInvocationIndex]
+            , s_histo[gl_LocalInvocationIndex]);
     }
 
 }
