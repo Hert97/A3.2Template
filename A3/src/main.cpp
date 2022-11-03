@@ -74,9 +74,11 @@ public:
 		glm::mat4 modelView;
 	} uboVS;
 
-	struct {
+	struct HistoBuffer
+	{
 		unsigned int histoBin[256];
 		float cdf[256];
+		unsigned int sum;
 	} uboHistoEq;
 
 	int vertexBufferSize;
@@ -248,17 +250,6 @@ public:
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
 
-			//memory buffer barrier
-			VkBufferMemoryBarrier bufferMemoryBarrier = {};
-			bufferMemoryBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			bufferMemoryBarrier.buffer = uniformBufferHistoEq.buffer;
-			bufferMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-			bufferMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			bufferMemoryBarrier.offset = 0;
-			bufferMemoryBarrier.size = VK_WHOLE_SIZE;
-
 			// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
 			VkImageMemoryBarrier imageMemoryBarrier = {};
 			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -278,7 +269,7 @@ public:
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_FLAGS_NONE,
 				0, nullptr,
-				1, &bufferMemoryBarrier,
+				0, nullptr,
 				1, &imageMemoryBarrier);
 
 			vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -331,8 +322,35 @@ public:
 		//groupCountX is the number of local workgroups to dispatch in the X dimension.
 		//groupCountY is the number of local workgroups to dispatch in the Y dimension.
 		//groupCountZ is the number of local workgroups to dispatch in the Z dimension.
-		vkCmdDispatch(compute.commandBuffer, (textureComputeTarget.width - 1) / 16 + 1, (textureComputeTarget.height - 1) / 16 + 1, 1);
+		//vkCmdDispatch(compute.commandBuffer, (textureComputeTarget.width - 1) / 16 + 1, (textureComputeTarget.height - 1) / 16 + 1, 1);
 		//vkCmdDispatch(compute.commandBuffer, textureComputeTarget.width / 16 , textureComputeTarget.height / 16, 1);
+		vkCmdDispatch(compute.commandBuffer, ((textureComputeTarget.width * textureComputeTarget.height) - 1) / 1024 + 1, 1, 1);
+
+		VkBufferMemoryBarrier histoBufferMemoryBarrier = {};
+		histoBufferMemoryBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		histoBufferMemoryBarrier.buffer = uniformBufferHistoEq.buffer;
+		histoBufferMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		histoBufferMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		histoBufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		histoBufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		histoBufferMemoryBarrier.size = VK_WHOLE_SIZE;
+		histoBufferMemoryBarrier.offset = sizeof(unsigned int) * 256;
+
+		/*VkMemoryBarrier histoMemBarrier{};
+		histoMemBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		histoMemBarrier.pNext = 0;
+		histoMemBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		histoMemBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;*/
+	
+
+		vkCmdPipelineBarrier(
+			compute.commandBuffer,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_FLAGS_NONE,
+			0, nullptr,
+			1, &histoBufferMemoryBarrier,
+			0, nullptr);
 
 		//cdf
 		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelines[1]);
@@ -343,14 +361,33 @@ public:
 		vkCmdDispatch(compute.commandBuffer, 1, 1, 1);
 
 
+		/*VkBufferMemoryBarrier applyMemoryBarrier = {};
+		histoBufferMemoryBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		histoBufferMemoryBarrier.buffer = uniformBufferHistoEq.buffer;
+		histoBufferMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		histoBufferMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		histoBufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		histoBufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		histoBufferMemoryBarrier.size = VK_WHOLE_SIZE;
+		histoBufferMemoryBarrier.offset = 0;*/
 
-		//cdf
-		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelines[1]);
-		vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelineLayout[1], 0, 1, &compute.descriptorSet[1], 0, 0);
+
+		vkCmdPipelineBarrier(
+			compute.commandBuffer,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_FLAGS_NONE,
+			0, nullptr,
+			0, nullptr,
+			0, nullptr);
+
+		//apply
+		vkCmdBindPipeline(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelines[2]);
+		vkCmdBindDescriptorSets(compute.commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute.pipelineLayout[2], 0, 1, &compute.descriptorSet[2], 0, 0);
 		//groupCountX is the number of local workgroups to dispatch in the X dimension.
 		//groupCountY is the number of local workgroups to dispatch in the Y dimension.
 		//groupCountZ is the number of local workgroups to dispatch in the Z dimension.
-		vkCmdDispatch(compute.commandBuffer, 1, 1, 1);
+		vkCmdDispatch(compute.commandBuffer, ((textureComputeTarget.width * textureComputeTarget.height) - 1) / 1024 + 1, 1, 1);
 
 		vkEndCommandBuffer(compute.commandBuffer);
 
@@ -425,7 +462,7 @@ public:
 			// Graphics pipelines image samplers for displaying compute output image
 			vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 ),
 			// Compute pipelines uses a storage image for image reads and writes
-			vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3 ),
+			vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4 ),
 			// Compute pipelines uses a storage buffer
 			vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,  3),
 		};
@@ -582,7 +619,7 @@ public:
 			},
 			//cdfScan
 			std::vector<VkDescriptorSetLayoutBinding>
-			{	// Binding 0: output image
+			{	// Binding 0: Input image (read-only)
 				vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0),
 				// Binding 1: histoeq buffer
 				vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1),
@@ -590,10 +627,12 @@ public:
 			//apply
 			std::vector<VkDescriptorSetLayoutBinding>
 			{	
-				// Binding 0: output image
+				// Binding 0: Input image (read-only)
 				vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0),
 				// Binding 1: histoeq buffer
 				vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1),
+				// Binding 2: output image
+				vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 2),
 			
 			},
 		};
@@ -617,8 +656,9 @@ public:
 			//apply
 			std::vector<VkWriteDescriptorSet>
 			{
-				vks::initializers::writeDescriptorSet(nullptr, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0, &textureComputeTarget.descriptor),
+				vks::initializers::writeDescriptorSet(nullptr, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0, &textureColorMap.descriptor),
 				vks::initializers::writeDescriptorSet(nullptr, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &uniformBufferHistoEq.descriptor),
+				vks::initializers::writeDescriptorSet(nullptr, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &textureComputeTarget.descriptor),
 
 			},
 		};
@@ -707,12 +747,14 @@ public:
 		// storage buffer
 		VK_CHECK_RESULT(vulkanDevice->createBuffer( 
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			&uniformBufferHistoEq,
 			sizeof(uboHistoEq)));
-
+		// Map persistent
+		VK_CHECK_RESULT(uniformBufferHistoEq.map());
 		
 		updateUniformBuffers();
+		updateUniformHistoBuffers();
 	}
 
 	void updateUniformBuffers()
@@ -721,8 +763,18 @@ public:
 		uboVS.modelView = camera.matrices.view;
 		memcpy(uniformBufferVS.mapped, &uboVS, sizeof(uboVS));
 
+	
 	}
-
+	void updateUniformHistoBuffers()
+	{
+		for (int i = 0; i < 256; ++i)
+		{
+			uboHistoEq.cdf[i] = 0.0f;
+			uboHistoEq.histoBin[i] = 0;
+		}
+		uboHistoEq.sum = 0;
+		memcpy(uniformBufferHistoEq.mapped, &uboHistoEq, sizeof(uboHistoEq));
+	}
 	void draw()
 	{
 		// Wait for rendering finished
@@ -786,6 +838,9 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
+
+		//after every render loop
+		updateUniformHistoBuffers();
 	}
 
 	virtual void OnUpdateUIOverlay(vks::UIOverlay* overlay)

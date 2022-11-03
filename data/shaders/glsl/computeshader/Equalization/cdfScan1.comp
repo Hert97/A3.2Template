@@ -1,0 +1,38 @@
+#version 450
+
+layout (local_size_x = 1, local_size_y = 1) in;
+layout (binding = 0, rgba8) uniform readonly image2D inputImage;
+
+layout (binding = 1) buffer HistoEq
+{
+	uint histoBin[256];
+    float cdf[256];
+    uint sum;
+
+} histoEq;
+
+shared float scan[256];
+void main()
+{
+//   const uvec2 dim = imageSize(inputImage);
+//   const float prob =  1.0 / (dim.x * dim.y);
+//
+//   histoEq.cdf[0] =  prob * float(histoEq.histoBin[0]) ;
+//   for(int i = 1 ; i < 256 ; ++i)
+//   {
+//        scan[i] = prob * float(histoEq.histoBin[i]) +  float(histoEq.histoBin[i - 1]) ;
+//        histoEq.cdf[i] =  scan[i] ;
+//   }
+//   
+    
+   if( gl_LocalInvocationIndex == 0 )
+   {
+        for(int i = 0 ; i < 256 ; ++i)
+            histoEq.sum += histoEq.histoBin[i];
+   }
+    histoEq.cdf[gl_LocalInvocationIndex] =  -1.0f;
+}
+ 	
+ 
+ 
+ 

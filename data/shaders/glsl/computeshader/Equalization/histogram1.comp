@@ -1,6 +1,6 @@
 #version 450
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 16, local_size_y = 16) in;
 layout (binding = 0, rgba8) uniform readonly image2D inputImage;
 #define HISTO_SIZE 256
 
@@ -22,40 +22,34 @@ void main()
 
     uvec2 imageDim = imageSize(inputImage) ;
 
-//    uint tid = gl_LocalInvocationIndex;
-//    uint x = gl_GlobalInvocationID.x;
-//    uint y = gl_GlobalInvocationID.y;
-
-    uint tid = gl_GlobalInvocationID.x ;
+    uint tid = gl_LocalInvocationIndex;
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
     //uint stride = gl_WorkGroupSize.x * gl_WorkGroupSize.y;
-    if(tid < imageDim.x * imageDim.y )
+    if(x < imageDim.x && y < imageDim.y)
     {
-       uint x = tid % imageDim.x;
-       uint y = tid / imageDim.x;
-
        vec3 pixel = imageLoad(inputImage, ivec2(x,y)).rgb;
        float Y = 255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b);
        uint v = clamp(uint(Y),0,255);
        atomicAdd(s_histo[uint(Y)],1);
-       //tid+= imageDim.x;
     }
     memoryBarrierShared();
     barrier();
 
-    if(gl_LocalInvocationIndex < HISTO_SIZE)
-    {
-          atomicAdd(histoEq.histoBin[gl_LocalInvocationIndex]
-            , s_histo[gl_LocalInvocationIndex]);
-    }
-
-//    if ( gl_GlobalInvocationID.x == 0 &&  gl_GlobalInvocationID.y == 0) 
+//    if(gl_LocalInvocationIndex < HISTO_SIZE)
 //    {
-//        for(int i = 0 ; i < HISTO_SIZE ; ++i)
-//        {
-//             atomicAdd(histoEq.histoBin[i]
-//            , s_histo[i]);
-//        }
+//          atomicAdd(histoEq.histoBin[gl_LocalInvocationIndex]
+//            , s_histo[gl_LocalInvocationIndex]);
 //    }
+
+    if ( gl_GlobalInvocationID.x == 0 &&  gl_GlobalInvocationID.y == 0) 
+    {
+        for(int i = 0 ; i < HISTO_SIZE ; ++i)
+        {
+             atomicAdd(histoEq.histoBin[i]
+            , s_histo[i]);
+        }
+    }
 
 }
  	
