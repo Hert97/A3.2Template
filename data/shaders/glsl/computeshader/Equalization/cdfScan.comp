@@ -16,19 +16,15 @@ void main()
 {
    const uvec2 dim = imageSize(inputImage);
    const float prob =  1.0 / (dim.x * dim.y);
-   uint tid = gl_GlobalInvocationID.x;
+   uint tid = gl_LocalInvocationID.x;
    if(tid < 256)
-   {
        scan[tid] = histoEq.histoBin[tid];
 
-   }
    memoryBarrierShared();
    barrier();
 
     for (uint stride = 1; stride < gl_WorkGroupSize.x ; stride *= 2) 
     {
-       barrier();
-            
        if (gl_LocalInvocationID.x >= stride) 
        {	
            scan[gl_LocalInvocationID.x] += scan[gl_LocalInvocationID.x - stride];
@@ -36,12 +32,18 @@ void main()
     }
     memoryBarrierShared();
     barrier();
-    
-    //if(gl_LocalInvocationID.x < 256)
-    //histoEq.cdf[gl_GlobalInvocationID.x] = scan[gl_GlobalInvocationID.x];		 
-    
+
+    for(int i = 0 ; i<  256 ; ++i) 
+    {
+       histoEq.cdf[i] = scan[i];		 
+    }	
+
+//    
+//    if(gl_LocalInvocationID.x < 256)
+//        histoEq.cdf[gl_LocalInvocationID.x] = scan[gl_LocalInvocationID.x];		 
+//    
 //    float scanValue = gl_LocalInvocationID.x > 0 ? scan[gl_LocalInvocationID.x - 1] : 0.0;
-//    if(gl_LocalInvocationID.x > 256)
+//    if(gl_LocalInvocationID.x < 256)
 //        histoEq.cdf[gl_LocalInvocationID.x] = scan[gl_LocalInvocationID.x] * prob + scanValue;
 
 

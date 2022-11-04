@@ -15,7 +15,7 @@ shared float s_cdfMinY;
 
 float CorrectComp(in float cdfVal , in float cdfMin )
 {
-    return clamp(255 *((cdfVal ) - ( cdfMin ) ) / ( 1 - (cdfMin) ) , 0.0 , 255.0 );
+    return clamp(255 *((cdfVal ) - ( cdfMin ) ) / ( 1.0 - (cdfMin) ) , 0.0 , 255.0 );
 }
 
 void main()
@@ -34,9 +34,10 @@ void main()
        uint x = tid % imageDim.x;
        uint y = tid / imageDim.x;
        vec3 pixel = imageLoad(inputImage, ivec2(x,y)).rgb;
-       float Y = CorrectComp(histoEq.cdf[tid],s_cdfMinY) / 255.0;
-       float U = (-0.169 * pixel.r + -0.331 * pixel.g + 0.499 *  pixel.b) ;
-       float V = (0.499 * pixel.r + -0.418 * pixel.g + 0.0813 *  pixel.b) ;
+       float index = 255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b);
+       float Y = CorrectComp(histoEq.cdf[uint(index)],s_cdfMinY) / 255.0;
+       float U = (-0.169 * pixel.r - 0.331 * pixel.g + 0.499 *  pixel.b) ;
+       float V = (0.499 * pixel.r  - 0.418 * pixel.g + 0.0813 *  pixel.b) ;
 
        vec3 fColor = clamp(vec3(Y + 1.402 * V, Y - 0.334 * U - 0.714 * V, Y + 1.772 * U ),vec3(0.0),vec3(1.0));
     
