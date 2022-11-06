@@ -78,7 +78,7 @@ public:
 	{
 		unsigned int histoBin[256];
 		float cdf[256];
-		unsigned int sum;
+		//unsigned int sum;
 	} uboHistoEq;
 
 	int vertexBufferSize;
@@ -326,6 +326,7 @@ public:
 		//vkCmdDispatch(compute.commandBuffer, textureComputeTarget.width / 16 , textureComputeTarget.height / 16, 1);
 		vkCmdDispatch(compute.commandBuffer, ((textureComputeTarget.width * textureComputeTarget.height) - 1) / 1024 + 1, 1, 1);
 
+		//storage buffer barrier
 		VkBufferMemoryBarrier histoBufferMemoryBarrier = {};
 		histoBufferMemoryBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		histoBufferMemoryBarrier.buffer = uniformBufferHistoEq.buffer;
@@ -335,13 +336,6 @@ public:
 		histoBufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		histoBufferMemoryBarrier.size = VK_WHOLE_SIZE;
 		histoBufferMemoryBarrier.offset = sizeof(unsigned int) * 256;
-
-		/*VkMemoryBarrier histoMemBarrier{};
-		histoMemBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-		histoMemBarrier.pNext = 0;
-		histoMemBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		histoMemBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;*/
-	
 
 		vkCmdPipelineBarrier(
 			compute.commandBuffer,
@@ -359,18 +353,6 @@ public:
 		//groupCountY is the number of local workgroups to dispatch in the Y dimension.
 		//groupCountZ is the number of local workgroups to dispatch in the Z dimension.
 		vkCmdDispatch(compute.commandBuffer, 1, 1, 1);
-
-
-		/*VkBufferMemoryBarrier applyMemoryBarrier = {};
-		histoBufferMemoryBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		histoBufferMemoryBarrier.buffer = uniformBufferHistoEq.buffer;
-		histoBufferMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		histoBufferMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		histoBufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		histoBufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		histoBufferMemoryBarrier.size = VK_WHOLE_SIZE;
-		histoBufferMemoryBarrier.offset = 0;*/
-
 
 		vkCmdPipelineBarrier(
 			compute.commandBuffer,
@@ -608,6 +590,7 @@ public:
 		compute.descriptorSetLayout.resize(3);
 		compute.pipelineLayout.resize(3);
 
+		//layout bindings
 		std::array<std::vector<VkDescriptorSetLayoutBinding>, 3> setLayoutBindings
 		{	
 			//histo
@@ -637,6 +620,7 @@ public:
 			},
 		};
 		
+		//write descriptors
 		std::array<std::vector<VkWriteDescriptorSet>,3> computeWriteDescriptorSets 
 		{
 			//histo
@@ -772,7 +756,7 @@ public:
 			uboHistoEq.cdf[i] = 0.0f;
 			uboHistoEq.histoBin[i] = 0;
 		}
-		uboHistoEq.sum = 0;
+		//uboHistoEq.sum = 0;
 		memcpy(uniformBufferHistoEq.mapped, &uboHistoEq, sizeof(uboHistoEq));
 	}
 	void draw()
@@ -839,7 +823,7 @@ public:
 			updateUniformBuffers();
 		}
 
-		//after every render loop
+		// reset buffer
 		updateUniformHistoBuffers();
 	}
 

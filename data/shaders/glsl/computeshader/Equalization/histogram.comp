@@ -1,3 +1,5 @@
+
+
 #version 450
 
 layout (local_size_x = 1024, local_size_y = 1) in;
@@ -8,13 +10,14 @@ layout (binding = 1) buffer HistoEq
 {
 	uint histoBin[HISTO_SIZE];
     float cdf[HISTO_SIZE];
-    uint sum;
+    //uint sum;
 
 } histoEq;
 
 shared uint s_histo[HISTO_SIZE];
 void main()
 {
+    //init shared memory
     if(gl_LocalInvocationIndex < HISTO_SIZE)
         s_histo[gl_LocalInvocationIndex] = 0;
     memoryBarrierShared();
@@ -22,22 +25,18 @@ void main()
 
     uvec2 imageDim = imageSize(inputImage) ;
 
-//    uint tid = gl_LocalInvocationIndex;
-//    uint x = gl_GlobalInvocationID.x;
-//    uint y = gl_GlobalInvocationID.y;
-
     uint tid = gl_GlobalInvocationID.x ;
-    //uint stride = gl_WorkGroupSize.x * gl_WorkGroupSize.y;
     if(tid < imageDim.x * imageDim.y )
     {
        uint x = tid % imageDim.x;
        uint y = tid / imageDim.x;
 
        vec3 pixel = imageLoad(inputImage, ivec2(x,y)).rgb;
+       //convert YUV model
        float Y = 255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b);
+       //index into histo
        uint v = clamp(uint(Y),0,255);
        atomicAdd(s_histo[uint(Y)],1);
-       //tid+= imageDim.x;
     }
     memoryBarrierShared();
     barrier();
@@ -48,14 +47,6 @@ void main()
             , s_histo[gl_LocalInvocationIndex]);
     }
 
-//    if ( gl_GlobalInvocationID.x == 0 &&  gl_GlobalInvocationID.y == 0) 
-//    {
-//        for(int i = 0 ; i < HISTO_SIZE ; ++i)
-//        {
-//             atomicAdd(histoEq.histoBin[i]
-//            , s_histo[i]);
-//        }
-//    }
 
 }
  	
