@@ -1,7 +1,4 @@
-
-
 #version 450
-
 layout (local_size_x = 1024, local_size_y = 1) in;
 layout (binding = 0, rgba8) uniform readonly image2D inputImage;
 #define HISTO_SIZE 256
@@ -33,10 +30,11 @@ void main()
 
        vec3 pixel = imageLoad(inputImage, ivec2(x,y)).rgb;
        //convert YUV model
-       float Y = 255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b);
+       //float Y = clamp(255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b), 0.0,255.0 );
+       float Y = 255.0 * clamp(0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b, 0.0,1.0);
        //index into histo
-       uint v = clamp(uint(Y),0,255);
-       atomicAdd(s_histo[uint(Y)],1);
+       uint v = uint(Y);
+       atomicAdd(s_histo[v],1);
     }
     memoryBarrierShared();
     barrier();
