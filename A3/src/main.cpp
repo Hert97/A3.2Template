@@ -747,11 +747,10 @@ public:
 		uboVS.modelView = camera.matrices.view;
 		memcpy(uniformBufferVS.mapped, &uboVS, sizeof(uboVS));
 
-
+	
 	}
 	void updateUniformHistoBuffers()
 	{
-
 		for (int i = 0; i < 256; ++i)
 		{
 			uboHistoEq.cdf[i] = 0.0f;
@@ -823,7 +822,6 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
-
 		static bool save = true;
 		if (save)
 		{
@@ -859,7 +857,6 @@ public:
 			os.close();
 			save = false;
 		}
-	
 
 		// reset buffer
 		updateUniformHistoBuffers();
