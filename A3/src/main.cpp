@@ -78,7 +78,6 @@ public:
 	{
 		unsigned int histoBin[256];
 		float cdf[256];
-		//unsigned int sum;
 	} uboHistoEq;
 
 	int vertexBufferSize;
@@ -682,7 +681,7 @@ public:
 			// Create compute shader pipelines
 			VkComputePipelineCreateInfo computePipelineCreateInfo =
 				vks::initializers::computePipelineCreateInfo(compute.pipelineLayout[pipelineIndex], 0);
-			std::string fileName = getShadersPath() + "computeshader/Equalization/" + shaderName + ".comp.spv";
+			std::string fileName = getShadersPath() + "computeshader/" + shaderName + ".comp.spv";
 			computePipelineCreateInfo.stage = loadShader(fileName, VK_SHADER_STAGE_COMPUTE_BIT);
 			VkPipeline pipeline;
 			VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
@@ -756,7 +755,6 @@ public:
 			uboHistoEq.cdf[i] = 0.0f;
 			uboHistoEq.histoBin[i] = 0;
 		}
-		//uboHistoEq.sum = 0;
 		memcpy(uniformBufferHistoEq.mapped, &uboHistoEq, sizeof(uboHistoEq));
 	}
 	void draw()
@@ -822,42 +820,7 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
-		static bool save = true;
-		if (save)
-		{
-			memcpy(&uboHistoEq, uniformBufferHistoEq.mapped, sizeof(uboHistoEq));
-
-			std::ofstream os{ "histo.txt" };
-			if (os)
-			{
-				int i;
-				int sum = 0;
-				for (i = 0; i < 256; ++i)
-					sum += uboHistoEq.histoBin[i];
-
-				os << "Width 512 Height 512\n";
-				os << "total # of pixels: " << sum << " (Y component only)\n\n";
-
-
-				os << "/*histogram bins*/\n";
-				for (i = 0; i < 256; ++i)
-				{
-					os << uboHistoEq.histoBin[i] << ' ';
-					if (i != 0 && (i + 1) % 4 == 0)
-						os << '\n';
-				}
-				os << "/*cdf*/\n";
-				for (i = 0; i < 256; ++i)
-				{
-					os << uboHistoEq.cdf[i] << ' ';
-					if (i != 0 && (i + 1) % 4 == 0)
-						os << '\n';
-				}
-			}
-			os.close();
-			save = false;
-		}
-
+	
 		// reset buffer
 		updateUniformHistoBuffers();
 	}

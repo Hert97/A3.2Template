@@ -1,0 +1,48 @@
+#version 450
+
+layout (local_size_x = 256, local_size_y = 1) in;
+layout (binding = 0, rgba8) uniform readonly image2D inputImage;
+#define HISTO_SIZE 256
+
+layout (binding = 1) buffer HistoEq
+{
+	uint histoBin[HISTO_SIZE];
+    float cdf[HISTO_SIZE];
+
+} histoEq;
+
+shared float scan[HISTO_SIZE];
+void main()
+{
+   const uvec2 dim = imageSize(inputImage);
+   const float prob =  1.0 / (dim.x * dim.y);
+   uint tid = gl_LocalInvocationID.x;
+
+   //init shared with cdf
+   if(tid < HISTO_SIZE)
+       scan[tid] = histoEq.histoBin[tid] * prob;
+
+   memoryBarrierShared();
+   barrier();
+
+   //perform scanning
+   for (uint stride = 1; stride < gl_WorkGroupSize.x ; stride *= 2) 
+   {
+       if (gl_LocalInvocationID.x >= stride) 
+       {	
+          scan[gl_LocalInvocationID.x] += scan[gl_LocalInvocationID.x - stride];
+       }
+   }
+   memoryBarrierShared();
+   barrier();
+
+    //copy to storage buffer
+   if(gl_LocalInvocationID.x < HISTO_SIZE)
+       histoEq.cdf[gl_LocalInvocationID.x] = scan[gl_LocalInvocationID.x];	
+
+
+}
+ 	
+ 
+ 
+ 
