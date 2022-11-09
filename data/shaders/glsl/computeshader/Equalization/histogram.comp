@@ -7,7 +7,6 @@ layout (binding = 1) buffer HistoEq
 {
 	uint histoBin[HISTO_SIZE];
     float cdf[HISTO_SIZE];
-    //uint sum;
 
 } histoEq;
 
@@ -28,10 +27,9 @@ void main()
        uint x = tid % imageDim.x;
        uint y = tid / imageDim.x;
 
-       vec3 pixel = imageLoad(inputImage, ivec2(x,y)).rgb;
+       vec3 pixel = 255.0 * imageLoad(inputImage, ivec2(gl_GlobalInvocationID.x,gl_GlobalInvocationID.y)).rgb;
        //convert YUV model
-       //float Y = clamp(255.0 * (0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b), 0.0,255.0 );
-       float Y = 255.0 * clamp(0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b, 0.0,1.0);
+       float Y = clamp(0.299 * pixel.r + 0.587 * pixel.g + 0.114 *  pixel.b, 0.0,255.0);
        //index into histo
        uint v = uint(Y);
        atomicAdd(s_histo[v],1);
