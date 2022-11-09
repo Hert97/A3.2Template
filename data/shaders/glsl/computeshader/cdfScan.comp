@@ -1,3 +1,20 @@
+/* Start Header *****************************************************************/ 
+
+/*! \file cdfScan.comp
+
+     \author Ho Yi Guan, yiguan.ho
+
+     \par email: yiguan.ho@digipen.edu) 
+
+     \date Sept 02, 2022
+
+     \brief Calculate and perform cdf scanning for histogram
+     Copyright (C) 2022 DigiPen Institute of Technology. 
+
+  Reproduction or disclosure of this file or its contents without the prior written consent of DigiPen Institute of Technology is prohibited. */ 
+
+/* End Header *******************************************************************/ 
+
 #version 450
 
 layout (local_size_x = 256, local_size_y = 1) in;

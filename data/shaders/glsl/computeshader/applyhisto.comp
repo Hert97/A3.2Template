@@ -1,3 +1,19 @@
+/* Start Header *****************************************************************/ 
+
+/*! \file applyhisto.comp
+
+     \author Ho Yi Guan, yiguan.ho
+
+     \par email: yiguan.ho@digipen.edu) 
+
+     \date Sept 02, 2022
+
+     \brief Apply histogram equalization to output image
+     Copyright (C) 2022 DigiPen Institute of Technology. 
+
+  Reproduction or disclosure of this file or its contents without the prior written consent of DigiPen Institute of Technology is prohibited. */ 
+
+/* End Header *******************************************************************/ 
 #version 450
 
 layout (local_size_x = 1024, local_size_y = 1) in;
@@ -9,43 +25,43 @@ layout (binding = 1) buffer HistoEq
 {
 	uint histoBin[HISTO_SIZE];
     float cdf[HISTO_SIZE];
-    //uint sum;
 
 } histoEq;
 
-shared float s_cdfMinY;
+shared float s_cdf[HISTO_SIZE];
 
 
 const mat3 ToYUV = mat3
 (
-    0.299, -0.169 , 0.499,
-    0.587, -0.331, -0.418,
-    0.114, 0.499,-0.0813
+    0.299, -0.169 ,  0.499,
+    0.587, -0.331 , -0.418,
+    0.114,  0.499 , -0.0813
 );
 
 const mat3 ToRGB = mat3
 (
-    1.0, 1.0 ,  1.0,
-    0.0, -0.344, 1.772,
-    1.402, -0.714, 0.0
+    1.0  ,  1.0  ,  1.0  ,
+    0.0  , -0.344,  1.772,
+    1.402, -0.714,  0.0
 );
 
 float CorrectComp(in float cdfVal , in float cdfMin )
 {
     return clamp((cdfVal - cdfMin) / (1.0 - cdfMin), 0.0, 1.0);
-    //return clamp(255.0 * (cdfVal - cdfMin) / ( 1.0 - cdfMin) , 0.0 , 255.0 );
 }
 
 void main()
 {
     uint tid = gl_GlobalInvocationID.x ;
     uvec2 imageDim = imageSize(inputImage) ;
-    
-    if(tid == 0)
-        s_cdfMinY = histoEq.cdf[0];
+
+    if(gl_LocalInvocationID.x < HISTO_SIZE)
+        s_cdf[gl_LocalInvocationID.x] 
+        = histoEq.cdf[gl_LocalInvocationID.x];
+
     memoryBarrierShared();
     barrier();
-
+    float cdfMin = s_cdf[0];
     if(tid < imageDim.x * imageDim.y )
     {
        //make thread into 2D
@@ -55,11 +71,12 @@ void main()
 
        vec3 YUV = ToYUV * pixel;
        uint index = uint(clamp(YUV.r * 255.0,0.0,255.0));
-       YUV.r = CorrectComp(histoEq.cdf[index],s_cdfMinY);
+       YUV.r = CorrectComp(s_cdf[index],cdfMin);
        vec3 rgb = clamp(ToRGB * YUV,vec3(0.0),vec3(1.0));
        imageStore(resultImage, ivec2(x,y), vec4(rgb,1.0));
     }
-
+    memoryBarrierShared();
+    barrier();
   
 }
  	

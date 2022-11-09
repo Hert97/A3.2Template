@@ -1,3 +1,21 @@
+/* Start Header *****************************************************************/ 
+
+/*! \file histogram.comp
+
+     \author Ho Yi Guan, yiguan.ho
+
+     \par email: yiguan.ho@digipen.edu) 
+
+     \date Sept 02, 2022
+
+     \brief Compute shader for histograming
+     Copyright (C) 2022 DigiPen Institute of Technology. 
+
+  Reproduction or disclosure of this file or its contents without the prior written consent of DigiPen Institute of Technology is prohibited. */ 
+
+/* End Header *******************************************************************/ 
+
+
 #version 450
 layout (local_size_x = 1024, local_size_y = 1) in;
 layout (binding = 0, rgba8) uniform readonly image2D inputImage;
@@ -12,15 +30,12 @@ layout (binding = 1) buffer HistoEq
 
 shared uint s_histo[HISTO_SIZE];
 
-float MyClamp(float x, float start, float end)
-{
-    return min(max(x,start),end);
-}
 
 void main()
 {
     //init shared memory
-    if(gl_LocalInvocationIndex < HISTO_SIZE) s_histo[gl_LocalInvocationIndex] = 0;
+    if(gl_LocalInvocationIndex < HISTO_SIZE) 
+        s_histo[gl_LocalInvocationIndex] = 0;
     memoryBarrierShared();
     barrier();
 
@@ -45,7 +60,7 @@ void main()
 
     if(gl_LocalInvocationIndex < HISTO_SIZE)
     {
-          atomicAdd(histoEq.histoBin[gl_LocalInvocationIndex], s_histo[gl_LocalInvocationIndex]);
+        atomicAdd(histoEq.histoBin[gl_LocalInvocationIndex], s_histo[gl_LocalInvocationIndex]);
     }
 
 

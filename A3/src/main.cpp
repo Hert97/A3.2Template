@@ -726,7 +726,6 @@ public:
 		// Map persistent
 		VK_CHECK_RESULT(uniformBufferVS.map());
 
-
 		// storage buffer
 		VK_CHECK_RESULT(vulkanDevice->createBuffer( 
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -737,7 +736,7 @@ public:
 		VK_CHECK_RESULT(uniformBufferHistoEq.map());
 		
 		updateUniformBuffers();
-		updateUniformHistoBuffers();
+		//updateUniformHistoBuffers();
 	}
 
 	void updateUniformBuffers()
@@ -820,7 +819,43 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
-	
+#if 1
+		static bool save = true;
+		if (save)
+		{
+			memcpy(&uboHistoEq, uniformBufferHistoEq.mapped, sizeof(uboHistoEq));
+
+			std::ofstream os{ "histo.txt" };
+			if (os)
+			{
+				int i;
+				int sum = 0;
+				for (i = 0; i < 256; ++i)
+					sum += uboHistoEq.histoBin[i];
+
+				os << "Width 512 Height 512\n";
+				os << "total # of pixels: " << sum << " (Y component only)\n\n";
+
+
+				os << "/*histogram bins*/\n";
+				for (i = 0; i < 256; ++i)
+				{
+					os << uboHistoEq.histoBin[i] << ' ';
+					if (i != 0 && (i + 1) % 4 == 0)
+						os << '\n';
+				}
+				os << "/*cdf*/\n";
+				for (i = 0; i < 256; ++i)
+				{
+					os << uboHistoEq.cdf[i] << ' ';
+					if (i != 0 && (i + 1) % 4 == 0)
+						os << '\n';
+				}
+			}
+			os.close();
+			save = false;
+		}
+#endif
 		// reset buffer
 		updateUniformHistoBuffers();
 	}
