@@ -15,7 +15,6 @@
 
 #include "appBase.h"
 
-
 std::vector<const char*> VkAppBase::args;
 ///@William
 // Take a screenshot from the current swapchain image

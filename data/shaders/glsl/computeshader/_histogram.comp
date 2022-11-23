@@ -1,0 +1,67 @@
+/* Start Header *****************************************************************/ 
+
+/*! \file histogram.comp
+
+     \author Ho Yi Guan, yiguan.ho
+
+     \par email: yiguan.ho@digipen.edu) 
+
+     \date Sept 02, 2022
+
+     \brief Compute shader for histograming
+     Copyright (C) 2022 DigiPen Institute of Technology. 
+
+  Reproduction or disclosure of this file or its contents without the prior written consent of DigiPen Institute of Technology is prohibited. */ 
+
+/* End Header *******************************************************************/ 
+
+
+#version 450
+layout (local_size_x = 1024, local_size_y = 1) in;
+layout (binding = 0, rgba8) uniform readonly image2D inputImage;
+#define HISTO_SIZE 256
+
+layout (binding = 1) buffer HistoEq
+{
+	uint histoBin[HISTO_SIZE];
+    float cdf[HISTO_SIZE];
+
+} histoEq;
+
+shared uint s_histo[HISTO_SIZE];
+
+
+void main()
+{
+    //init shared memory
+    if(gl_LocalInvocationIndex < HISTO_SIZE) 
+        s_histo[gl_LocalInvocationIndex] = 0;
+    memoryBarrierShared();
+    barrier();
+
+    uvec2 imageDim = imageSize(inputImage) ;
+
+    uint tid = gl_GlobalInvocationID.x ;
+    if(tid < imageDim.x * imageDim.y )
+    {
+       uint x = tid % imageDim.x;
+       uint y = tid / imageDim.x;
+
+       vec3 pixel = 255.0 * imageLoad(inputImage, ivec2(x,y)).rgb;
+       //convert YUV model
+       float Y = clamp(0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b, 0.0,255.0);
+
+       //index into histo
+       uint v = uint(Y);
+       atomicAdd(s_histo[v],1);
+    }
+    memoryBarrierShared();
+    barrier();
+
+    if(gl_LocalInvocationIndex < HISTO_SIZE)
+    {
+        atomicAdd(histoEq.histoBin[gl_LocalInvocationIndex], s_histo[gl_LocalInvocationIndex]);
+    }
+
+
+}

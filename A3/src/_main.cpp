@@ -220,9 +220,9 @@ public:
 	void loadAssets()
 	{
 		///@William
-		//textureColorMap.loadFromFile(getAssetPath() + "textures/lena.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
-		textureColorMap.loadFromFile(getAssetPath() + "textures/" + benchmark.sourcefile, VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
-		//std::cout << "H:" << textureColorMap.height <<"W:" << textureColorMap.width << '\n';
+		textureColorMap.loadFromFile(getAssetPath() + "textures/lena.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
+		//textureColorMap.loadFromFile(getAssetPath() + "textures/" + benchmark.sourcefile, VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
+		std::cout << "H:" << textureColorMap.height <<"W:" << textureColorMap.width << '\n';
 	}
 
 	void buildCommandBuffers()
@@ -674,7 +674,7 @@ public:
 		
 
 		// One pipeline for each effect
-		shaderNames = { "histogram" , "cdfscan" , "applyhisto" };
+		shaderNames = { "histogram" , "cdfScan" , "applyhisto" };
 		int pipelineIndex = 0;
 		for (auto& shaderName : shaderNames) {
 
@@ -819,7 +819,7 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
-#if 0
+#if 1
 		static bool save = true;
 		if (save)
 		{
