@@ -56,7 +56,7 @@ public:
 	VulkanExample() : VkAppBase(ENABLE_VALIDATION)
 	{
 
-		title = "Tessellation shader displacement";
+		title = "A4 Tessellation shader";
 		camera.type = Camera::CameraType::lookat;
 		camera.setPosition(glm::vec3(0.f, -0.25f, -3.25f));
 		camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 256.0f);
@@ -280,10 +280,10 @@ public:
 		// Tessellation pipeline
 		// Load shaders
 		std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages;
-		shaderStages[0] = loadShader(getShadersPath() + "displacement/ellipsoid.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-		shaderStages[1] = loadShader(getShadersPath() + "displacement/ellipsoid.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-		shaderStages[2] = loadShader(getShadersPath() + "displacement/ellipsoid.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-		shaderStages[3] = loadShader(getShadersPath() + "displacement/ellipsoid.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+		shaderStages[0] = loadShader(getShadersPath() + "a4/ellipsoid.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+		shaderStages[1] = loadShader(getShadersPath() + "a4/ellipsoid.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+		shaderStages[2] = loadShader(getShadersPath() + "a4/ellipsoid.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+		shaderStages[3] = loadShader(getShadersPath() + "a4/ellipsoid.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
 
 		//no vertex input
 		VkPipelineVertexInputStateCreateInfo pipelineVertexInputInfo{};
