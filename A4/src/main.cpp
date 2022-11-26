@@ -41,7 +41,7 @@ public:
 		glm::mat4 projection;
 		glm::mat4 modelView;
 		glm::vec4 center	{ 0.0f, 0.0f, 0.0f , 0.0f };
-		glm::vec4 baryCoord	{ 1.0f, 1.0f, 1.0f , 1.0f };
+		glm::vec4 baryCoord	{ 1.0f, 1.0f, 1.0f , 1.0f }; //change xyz for size
 	} uboTessEval;
 
 	struct Pipelines {
