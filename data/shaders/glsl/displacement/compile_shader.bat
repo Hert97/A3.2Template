@@ -1,6 +1,6 @@
 @echo off
-"%VULKAN_SDK%\Bin\glslc.exe" "displacement.tese" -o "displacement.tese.spv"
-"%VULKAN_SDK%\Bin\glslc.exe" "displacement.tesc" -o "displacement.tesc.spv"
-"%VULKAN_SDK%\Bin\glslc.exe" "base.vert" -o "base.vert.spv"
-"%VULKAN_SDK%\Bin\glslc.exe" "base.frag" -o "base.frag.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "ellipsoid.tese" -o "ellipsoid.tese.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "ellipsoid.tesc" -o "ellipsoid.tesc.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "ellipsoid.vert" -o "ellipsoid.vert.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" "ellipsoid.frag" -o "ellipsoid.frag.spv"
 pause

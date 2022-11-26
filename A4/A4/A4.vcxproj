@@ -131,6 +131,7 @@
       <PreprocessorDefinitions>WIN32;_WINDOWS;VK_USE_PLATFORM_WIN32_KHR;NOMINMAX;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)..\ktx\other_include;$(SolutionDir)..\ktx\include;$(SolutionDir)..\imgui;C:\VulkanSDK\1.3.231.1\Include;$(SolutionDir)..\glm;$(SolutionDir)..\glfw\include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

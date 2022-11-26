@@ -23,29 +23,25 @@
 
 class VulkanExample : public VkAppBase
 {
-private:
-	//struct {
-	//	vks::Texture2D colorHeightMap;
-	//} textures;
+
 public:
 	bool splitScreen = true;//true;
 	bool displacement = true;
-
-	//vkglTF::Model plane;
 
 	struct {
 		vks::Buffer tessControl, tessEval;
 	} uniformBuffers;
 
 	struct UBOTessControl {
-		float tessLevel = 64.0f;
+		float innerTessLevel  = 64.0f;
+		float outerTessLevel = 64.0f;
 	} uboTessControl;
 
 	struct UBOTessEval {
 		glm::mat4 projection;
 		glm::mat4 modelView;
-		glm::vec4 position{ 0.0f, 0.0f, 0.0f, 0.0f };
-		glm::vec4 paramValues{ 1.0f, 1.0f, 1.0f, 0.0f };
+		glm::vec4 center	{ 0.0f, 0.0f, 0.0f , 0.0f };
+		glm::vec4 baryCoord	{ 1.0f, 1.0f, 1.0f , 1.0f };
 	} uboTessEval;
 
 	struct Pipelines {
@@ -59,10 +55,10 @@ public:
 
 	VulkanExample() : VkAppBase(ENABLE_VALIDATION)
 	{
+
 		title = "Tessellation shader displacement";
 		camera.type = Camera::CameraType::lookat;
 		camera.setPosition(glm::vec3(0.f, -0.25f, -3.25f));
-		camera.setRotation(glm::vec3(-20.0f, 45.0f, 0.0f));
 		camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 256.0f);
 	}
 
@@ -80,7 +76,6 @@ public:
 
 		uniformBuffers.tessControl.destroy();
 		uniformBuffers.tessEval.destroy();
-		//textures.colorHeightMap.destroy();
 	}
 
 	// Enable physical device features required for this example
@@ -104,9 +99,9 @@ public:
 
 	void loadAssets()
 	{
-		//const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
-		//plane.loadFromFile(getAssetPath() + "models/displacement_plane.gltf", vulkanDevice, queue, glTFLoadingFlags);
-		//textures.colorHeightMap.loadFromFile(getAssetPath() + "textures/stonefloor03_color_height_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue);
+		/*const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
+		plane.loadFromFile(getAssetPath() + "models/displacement_plane.gltf", vulkanDevice, queue, glTFLoadingFlags);
+		textures.colorHeightMap.loadFromFile(getAssetPath() + "textures/stonefloor03_color_height_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue);*/
 	}
 
 	void buildCommandBuffers()
@@ -151,7 +146,6 @@ public:
 			if (splitScreen)
 			{
 				vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.wireframe);
-				//plane.draw(drawCmdBuffers[i]);
 				vkCmdDraw(drawCmdBuffers[i], 3, 1, 0, 0);
 				scissor.offset.x = width / 2;
 				vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
@@ -160,7 +154,6 @@ public:
 			}
 
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.solid);
-			//plane.draw(drawCmdBuffers[i]);
 			vkCmdDraw(drawCmdBuffers[i], 3, 1, 0, 0);
 
 			//drawUI(drawCmdBuffers[i]);
@@ -287,12 +280,21 @@ public:
 		// Tessellation pipeline
 		// Load shaders
 		std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages;
-		shaderStages[0] = loadShader(getShadersPath() + "displacement/base.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-		shaderStages[1] = loadShader(getShadersPath() + "displacement/base.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-		shaderStages[2] = loadShader(getShadersPath() + "displacement/displacement.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-		shaderStages[3] = loadShader(getShadersPath() + "displacement/displacement.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+		shaderStages[0] = loadShader(getShadersPath() + "displacement/ellipsoid.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+		shaderStages[1] = loadShader(getShadersPath() + "displacement/ellipsoid.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+		shaderStages[2] = loadShader(getShadersPath() + "displacement/ellipsoid.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+		shaderStages[3] = loadShader(getShadersPath() + "displacement/ellipsoid.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+
+		//no vertex input
+		VkPipelineVertexInputStateCreateInfo pipelineVertexInputInfo{};
+		pipelineVertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		pipelineVertexInputInfo.vertexBindingDescriptionCount = 0;
+		pipelineVertexInputInfo.pVertexBindingDescriptions = VK_NULL_HANDLE;
+		pipelineVertexInputInfo.vertexAttributeDescriptionCount = 0;
+		pipelineVertexInputInfo.pVertexAttributeDescriptions = VK_NULL_HANDLE;
 
 		VkGraphicsPipelineCreateInfo pipelineCI = vks::initializers::pipelineCreateInfo(pipelineLayout, renderPass);
+		pipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineCI.pInputAssemblyState = &inputAssemblyState;
 		pipelineCI.pRasterizationState = &rasterizationState;
 		pipelineCI.pColorBlendState = &colorBlendState;
@@ -303,7 +305,7 @@ public:
 		pipelineCI.pTessellationState = &tessellationState;
 		pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
 		pipelineCI.pStages = shaderStages.data();
-		pipelineCI.pVertexInputState = vkglTF::Vertex::getPipelineVertexInputState({ vkglTF::VertexComponent::Position });
+		pipelineCI.pVertexInputState = &pipelineVertexInputInfo;
 
 		// Solid pipeline
 		VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.solid));
@@ -313,6 +315,8 @@ public:
 			rasterizationState.cullMode = VK_CULL_MODE_NONE;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.wireframe));
 		}
+
+		
 	}
 
 	// Prepare and initialize uniform buffer containing shader uniforms
@@ -343,21 +347,25 @@ public:
 	{
 		uboTessEval.projection = camera.matrices.perspective;
 		uboTessEval.modelView = camera.matrices.view;
-		//uboTessEval.lightPos.y = -0.5f - uboTessEval.tessStrength;
 		memcpy(uniformBuffers.tessEval.mapped, &uboTessEval, sizeof(uboTessEval));
 
 		// Tessellation control
-		float savedLevel = uboTessControl.tessLevel;
+		float savedInnerLevel = uboTessControl.innerTessLevel;
+		float savedOuterLevel = uboTessControl.outerTessLevel;
 		if (!displacement)
 		{
-			uboTessControl.tessLevel = 1.0f;
+			uboTessControl.innerTessLevel = 1.0f;
+			uboTessControl.outerTessLevel = 1.0f;
+
 		}
 
 		memcpy(uniformBuffers.tessControl.mapped, &uboTessControl, sizeof(uboTessControl));
 
 		if (!displacement)
 		{
-			uboTessControl.tessLevel = savedLevel;
+			uboTessControl.innerTessLevel = savedInnerLevel;
+			uboTessControl.outerTessLevel = savedOuterLevel;
+
 		}
 	}
 
@@ -396,6 +404,7 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
+	
 	}
 	virtual void OnUpdateUIOverlay(vks::UIOverlay* overlay)
 	{
@@ -403,10 +412,10 @@ public:
 			if (overlay->checkBox("Tessellation displacement", &displacement)) {
 				updateUniformBuffers();
 			}
-			/*if (overlay->inputFloat("Strength", &uboTessEval.tessStrength, 0.025f, 3)) {
+			if (overlay->inputFloat("Inner Level", &uboTessControl.innerTessLevel, 0.5f, 2)) {
 				updateUniformBuffers();
-			}*/
-			if (overlay->inputFloat("Level", &uboTessControl.tessLevel, 0.5f, 2)) {
+			}
+			if (overlay->inputFloat("Outer Level", &uboTessControl.outerTessLevel, 0.5f, 2)) {
 				updateUniformBuffers();
 			}
 			if (deviceFeatures.fillModeNonSolid) {

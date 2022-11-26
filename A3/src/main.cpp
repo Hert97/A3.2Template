@@ -67,6 +67,8 @@ public:
 	uint32_t indexCount;
 
 	vks::Buffer uniformBufferVS;
+	vks::Buffer uniformBufferHistoEq;
+
 
 	struct {
 		glm::mat4 projection;

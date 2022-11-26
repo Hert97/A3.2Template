@@ -1,7 +1,7 @@
 
 /* Start Header *****************************************************************/ 
 
-/*! \file ellipsoid.vert
+/*! \file ellipsoid.frag
 
      \author Ho Yi Guan, yiguan.ho
 
@@ -9,16 +9,20 @@
 
      \date Nov 25, 2022
 
-     \brief Ellipsod vertex input shader
+     \brief Fragment shader for ellipsoid frag output
      Copyright (C) 2022 DigiPen Institute of Technology. 
 
   Reproduction or disclosure of this file or its contents without the prior written consent of DigiPen Institute of Technology is prohibited. */ 
 
-/* End Header *******************************************************************/ 
+/* End Header *******************************************************************/
+
 #version 450
 
+layout (location = 1) in vec3 inPos;
 
-void main(void)
+layout (location = 0) out vec4 outFragColor;
+
+void main()
 {
-	
+	outFragColor.rgb = inPos;
 }
